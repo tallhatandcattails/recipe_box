@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kitchen Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #ece3cf;
+    --paper-deep: #ded2b5;
+    --card: #faf6ea;
+    --ink: #2a2620;
+    --ink-soft: #6b6252;
+    --pine: #2f4739;
+    --pine-deep: #203029;
+    --mustard: #c28e0e;
+    --mustard-soft: #e4c264;
+    --rust: #a34c2e;
+    --line: #c9bd9e;
+    --shadow: 0 1px 0 rgba(42,38,32,0.05), 0 6px 16px rgba(42,38,32,0.10);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 10% 5%, rgba(255,255,255,0.25), transparent 40%),
+      radial-gradient(circle at 90% 90%, rgba(0,0,0,0.03), transparent 40%),
+      var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+  .wrap{ max-width:960px; margin:0 auto; padding:28px 18px 80px; }
+
+  .masthead{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:22px; border-bottom:2px solid var(--ink); padding-bottom:14px; }
+  .masthead h1{
+    font-family:'Fraunces', serif; font-weight:600; font-style:italic;
+    font-size:clamp(28px,5vw,40px); margin:0; color:var(--pine-deep);
+    letter-spacing:-0.01em;
+  }
+  .masthead .tag{ font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft); }
+  .save-state{ font-size:11px; color:var(--ink-soft); text-align:right; min-width:110px; }
+  .save-state.err{ color:var(--rust); }
+
+  .tabs{ display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+  .tab-btn{
+    font-family:'IBM Plex Mono', monospace; font-weight:600; font-size:12px;
+    letter-spacing:0.05em; text-transform:uppercase;
+    background:var(--paper-deep); color:var(--ink-soft);
+    border:2px solid var(--ink); border-bottom:none;
+    padding:9px 14px 11px; border-radius:8px 8px 0 0;
+    cursor:pointer; position:relative; top:2px;
+  }
+  .tab-btn.active{ background:var(--card); color:var(--pine-deep); top:0; padding-bottom:13px; }
+  .tab-btn:hover:not(.active){ color:var(--ink); }
+
+  .panel{
+    background:var(--card); border:2px solid var(--ink); border-radius:0 10px 10px 10px;
+    padding:22px; box-shadow:var(--shadow);
+  }
+
+  h2.section-title{
+    font-family:'Fraunces', serif; font-weight:600; font-size:21px; margin:0 0 14px;
+    color:var(--pine-deep);
+  }
+  .muted{ color:var(--ink-soft); }
+  .small{ font-size:12px; }
+
+  input[type=text], input[type=search], textarea, select{
+    font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--ink);
+    background:#fff; border:1.5px solid var(--line); border-radius:6px;
+    padding:8px 10px; width:100%;
+  }
+  input:focus, textarea:focus, select:focus{ outline:2px solid var(--mustard); outline-offset:1px; border-color:var(--pine); }
+  textarea{ resize:vertical; min-height:70px; }
+  label{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--ink-soft); display:block; margin-bottom:4px; }
+  .field{ margin-bottom:12px; }
+  .row{ display:flex; gap:12px; flex-wrap:wrap; }
+  .row > .field{ flex:1; min-width:140px; }
+
+  button{ font-family:'IBM Plex Mono', monospace; cursor:pointer; border-radius:6px; border:1.5px solid var(--ink); }
+  .btn{ background:var(--pine); color:#fff; font-weight:600; font-size:12.5px; padding:9px 16px; border-color:var(--pine-deep); }
+  .btn:hover{ background:var(--pine-deep); }
+  .btn.secondary{ background:var(--card); color:var(--ink); }
+  .btn.secondary:hover{ background:#fff; }
+  .btn.warn{ background:var(--rust); border-color:#7d371f; color:#fff; }
+  .btn.warn:hover{ background:#8a3f26; }
+  .btn.ghost{ background:transparent; border-color:var(--line); color:var(--ink-soft); }
+  .btn.small{ padding:5px 10px; font-size:11px; }
+
+  .chips{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .chip{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.06em; font-weight:600;
+    padding:6px 12px; border-radius:999px; border:1.5px solid var(--ink); background:var(--card); color:var(--ink-soft); cursor:pointer;
+  }
+  .chip.active{ background:var(--mustard); border-color:#8a6a0c; color:#2a2010; }
+
+  .searchbar{ margin-bottom:16px; }
+
+  .recipe-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; }
+  .recipe-card{
+    background:#fff; border:1.5px solid var(--line); border-radius:2px 10px 10px 2px;
+    box-shadow:2px 2px 0 var(--line); padding:16px 14px 14px 18px; position:relative; cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .recipe-card:hover{ transform:translateY(-2px); box-shadow:3px 4px 0 var(--line); }
+  .recipe-card::before{
+    content:''; position:absolute; left:0; top:12px; bottom:12px; width:4px; background:var(--pine); border-radius:2px;
+  }
+  .recipe-card.effort-quick::before{ background:var(--pine); }
+  .recipe-card.effort-moderate::before{ background:var(--mustard); }
+  .recipe-card.effort-project::before{ background:var(--rust); }
+  .recipe-card h3{ font-family:'Fraunces', serif; font-size:17px; margin:0 0 6px; color:var(--ink); font-weight:600; }
+  .recipe-card .meta{ font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; }
+  .recipe-card .tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .recipe-card .tags span{ font-size:10.5px; background:var(--paper-deep); padding:2px 8px; border-radius:999px; color:var(--ink-soft); }
+
+  .recipe-detail{ border:1.5px dashed var(--line); border-radius:8px; padding:18px; margin-top:16px; background:#fffdf7; }
+  .recipe-detail h3{ font-family:'Fraunces', serif; font-size:22px; margin:0 0 4px; }
+  .recipe-detail .cols{ display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; }
+  .recipe-detail .cols > div{ flex:1; min-width:220px; }
+  .recipe-detail ul, .recipe-detail ol{ padding-left:20px; margin:0; }
+  .recipe-detail li{ margin-bottom:6px; }
+  .recipe-detail .notes{ background:var(--paper-deep); border-radius:6px; padding:10px 12px; margin-top:12px; font-size:13px; }
+  .detail-actions{ margin-top:16px; display:flex; gap:8px; flex-wrap:wrap; }
+
+  .grocery-add{ display:flex; gap:8px; margin-bottom:14px; }
+  .grocery-add input{ flex:1; }
+  .grocery-list{ list-style:none; padding:0; margin:0; }
+  .grocery-list li{ display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); }
+  .grocery-list li.checked span.item-text{ text-decoration:line-through; color:var(--ink-soft); }
+  .grocery-list input[type=checkbox]{ width:18px; height:18px; accent-color:var(--pine); }
+  .item-text{ flex:1; }
+  .item-source{ font-size:10.5px; color:var(--ink-soft); background:var(--paper-deep); padding:2px 8px; border-radius:999px; }
+  .del-x{ background:none; border:none; color:var(--ink-soft); font-size:15px; cursor:pointer; padding:2px 6px; }
+  .del-x:hover{ color:var(--rust); }
+
+  .empty-state{ text-align:center; padding:40px 20px; color:var(--ink-soft); }
+  .empty-state .glyph{ font-size:32px; margin-bottom:8px; }
+
+  .toolbar{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+
+  .archive-list{ margin-top:22px; }
+  .archive-item{ border:1px solid var(--line); border-radius:6px; padding:10px 14px; margin-bottom:8px; font-size:12.5px; display:flex; justify-content:space-between; align-items:center; }
+
+  .paste-box{ border:1.5px dashed var(--line); border-radius:8px; padding:14px; margin-bottom:20px; background:#fffdf7; }
+  .paste-box textarea{ min-height:120px; font-size:12.5px; }
+
+  .day-block{ border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden; }
+  .day-block summary{ cursor:pointer; padding:10px 14px; font-family:'Fraunces', serif; font-weight:600; color:var(--pine-deep); background:var(--paper-deep); list-style:none; }
+  .day-block summary::-webkit-details-marker{ display:none; }
+  .day-block summary .summary-sub{ font-family:'IBM Plex Mono', monospace; font-weight:400; font-size:11px; color:var(--ink-soft); margin-left:8px; }
+  .day-block .day-body{ padding:14px; }
+  .meal-row{ display:flex; gap:10px; align-items:center; padding:7px 0; border-bottom:1px dashed var(--line); flex-wrap:wrap; }
+  .meal-row:last-of-type{ border-bottom:none; }
+  .meal-label{ width:74px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); font-weight:600; }
+  .meal-fields{ flex:1; display:flex; gap:8px; flex-wrap:wrap; min-width:200px; }
+  .meal-fields > *{ flex:1; min-width:130px; }
+  .cooking-row{ background:var(--paper-deep); border-radius:6px; padding:10px 12px; margin-top:10px; }
+
+  .category-section{ margin-bottom:20px; }
+  .category-header{ font-family:'Fraunces', serif; font-weight:600; font-size:16px; color:var(--pine-deep); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .category-count{ font-size:11px; color:var(--ink-soft); font-weight:400; }
+  .onhand-item{ display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .onhand-item .item-text{ flex:1 1 140px; }
+  .onhand-item .item-note{ flex:2 1 160px; font-size:12px; color:var(--ink-soft); }
+  .onhand-item select{ flex:0 0 auto; width:auto; }
+
+  .review-day{ border-bottom:1px solid var(--line); padding:12px 0; }
+  .review-day:last-of-type{ border-bottom:none; }
+  .review-day .planned{ font-family:'Fraunces', serif; font-weight:600; color:var(--pine-deep); margin-bottom:4px; }
+  .review-day .review-fields{ display:flex; gap:10px; flex-wrap:wrap; }
+  .review-day .review-fields > *{ flex:1; min-width:160px; }
+  .feedback-card{ border:1.5px solid var(--line); border-radius:8px; padding:14px; margin-bottom:14px; background:#fffdf7; }
+  .feedback-card h4{ font-family:'Fraunces', serif; font-size:16px; margin:0 0 10px; }
+  .feedback-history{ margin-top:10px; font-size:12px; color:var(--ink-soft); border-top:1px dashed var(--line); padding-top:8px; }
+  .feedback-history .entry{ margin-bottom:6px; }
+
+  ::placeholder{ color:#b6ac96; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead">
+    <div>
+      <h1>Kitchen Ledger</h1>
+      <div class="tag">recipe box · pantry · weekly plan · review · grocery list</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="save-state" id="saveState">loading…</div>
+      <div style="margin-top:6px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+        <button class="btn ghost small" onclick="KL.exportData()">Export backup (.json)</button>
+        <button class="btn ghost small" onclick="KL.exportMarkdown()">Export readable copy (.md)</button>
+        <button class="btn ghost small" onclick="KL.importData()">Import backup</button>
+        <input type="file" id="import-input" accept="application/json" style="display:none" onchange="KL.handleImportFile(this)">
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="panel" id="panel"></div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'kitchen-ledger-data';
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const MEAL_SLOTS = ['Breakfast','Snack','Lunch','Dinner','Bed-time'];
+  const FOH_CATEGORIES = ['fridge','freezer','pantry','counter'];
+  const FOH_LABELS = { fridge:'Fridge', freezer:'Freezer', pantry:'Pantry', counter:'Counter' };
+  const COOKING_WORDS = ['cooking','cook','prep','prepping','make','making'];
+
+  function blankMeals(){
+    const m = {};
+    MEAL_SLOTS.forEach(s => { m[s] = { mode:'empty', recipeId:null, customText:'' }; });
+    return m;
+  }
+  function blankDays(){
+    return DAYS.map(d => ({
+      day:d,
+      meals: blankMeals(),
+      cooking: { mode:'none', recipeId:null, customText:'' },
+      note:'',
+      reviewStatus:'unconfirmed',
+      actualText:'',
+      extraNotes:''
+    }));
+  }
+  function defaultState(){
+    return {
+      recipes: [],
+      currentWeek: { days: blankDays(), weeklyNotes: '' },
+      groceryList: [],
+      foodOnHand: [],
+      archivedWeeks: []
+    };
+  }
+
+  // migrate an old single-meal-per-day record into the new multi-meal shape
+  function migrateDay(d){
+    if (d && d.meals && d.cooking) return d;
+    const migrated = {
+      day: d.day,
+      meals: blankMeals(),
+      cooking: { mode:'none', recipeId:null, customText:'' },
+      note: d.note || '',
+      reviewStatus: d.reviewStatus || 'unconfirmed',
+      actualText: d.actualText || '',
+      extraNotes: d.extraNotes || ''
+    };
+    if (d.mode && d.mode !== 'empty'){
+      migrated.meals['Dinner'] = { mode: d.mode, recipeId: d.recipeId || null, customText: d.customText || '' };
+    }
+    return migrated;
+  }
+
+  function migrateState(){
+    if (!state.currentWeek || !Array.isArray(state.currentWeek.days) || state.currentWeek.days.length !== 7){
+      state.currentWeek = { days: blankDays(), weeklyNotes: (state.currentWeek && state.currentWeek.weeklyNotes) || '' };
+    } else {
+      state.currentWeek.days = state.currentWeek.days.map(migrateDay);
+    }
+    if (!Array.isArray(state.foodOnHand)) state.foodOnHand = [];
+    if (!Array.isArray(state.archivedWeeks)) state.archivedWeeks = [];
+    state.archivedWeeks.forEach(w => { if (Array.isArray(w.days)) w.days = w.days.map(migrateDay); });
+    if (!Array.isArray(state.recipes)) state.recipes = [];
+    state.recipes.forEach(r => { if (!Array.isArray(r.feedbackLog)) r.feedbackLog = []; });
+  }
+
+  const hasClaudeStorage = (typeof window.storage !== 'undefined') && window.storage && typeof window.storage.get === 'function';
+
+  async function adapterGet(key){
+    if (hasClaudeStorage) return window.storage.get(key, false);
+    const raw = localStorage.getItem(key);
+    if (raw === null) throw new Error('not found');
+    return { value: raw };
+  }
+  async function adapterSet(key, value){
+    if (hasClaudeStorage) return window.storage.set(key, value, false);
+    localStorage.setItem(key, value);
+    return { value };
+  }
+
+  let state = defaultState();
+  let activeTab = 'recipes';
+  let recipeSearch = '';
+  let effortFilter = 'all';
+  let expandedRecipeId = null;
+  let showRecipeForm = false;
+  let editingRecipeId = null;
+
+  const saveStateEl = document.getElementById('saveState');
+  const tabsEl = document.getElementById('tabs');
+  const panelEl = document.getElementById('panel');
+
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function setSaveState(text, isErr){
+    saveStateEl.textContent = text;
+    saveStateEl.classList.toggle('err', !!isErr);
+  }
+
+  async function load(){
+    try{
+      const result = await adapterGet(STORAGE_KEY);
+      if (result && result.value){
+        const parsed = JSON.parse(result.value);
+        state = Object.assign(defaultState(), parsed);
+      }
+      migrateState();
+      setSaveState(hasClaudeStorage ? 'saved (synced)' : 'saved (this browser)');
+    } catch(e){
+      state = defaultState();
+      setSaveState('ready');
+    }
+    render();
+  }
+
+  async function save(){
+    setSaveState('saving…');
+    try{
+      const result = await adapterSet(STORAGE_KEY, JSON.stringify(state));
+      if (!result) throw new Error('no result');
+      setSaveState(hasClaudeStorage ? 'saved (synced)' : 'saved (this browser)');
+    } catch(e){
+      setSaveState('save failed — retrying', true);
+      setTimeout(save, 1500);
+    }
+  }
+
+  function exportData(){
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kitchen-ledger-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function mealText(m){
+    if (!m || m.mode==='empty') return '—';
+    if (m.mode==='out') return 'Eating out';
+    if (m.mode==='custom') return m.customText || '(untitled)';
+    if (m.mode==='recipe'){ const r = state.recipes.find(r => r.id===m.recipeId); return r ? r.title : '(deleted recipe)'; }
+    return '—';
+  }
+  function cookingText(c){
+    if (!c || c.mode==='none') return '—';
+    if (c.mode==='custom') return c.customText || '(untitled)';
+    if (c.mode==='recipe'){ const r = state.recipes.find(r => r.id===c.recipeId); return r ? r.title : '(deleted recipe)'; }
+    return '—';
+  }
+  function reviewSummaryText(d){
+    if (d.reviewStatus === 'as-planned') return 'Had it as planned';
+    if (d.reviewStatus === 'different') return 'Had something different' + (d.actualText ? ': ' + d.actualText : '');
+    return null;
+  }
+  function ratingLabel(v){
+    return { great:'Great', good:'Good', meh:'Meh', no:'Not again' }[v] || v;
+  }
+  function daySummary(d){
+    return `Dinner: ${mealText(d.meals['Dinner'])} · Cooking: ${cookingText(d.cooking)}`;
+  }
+  function dayBlockLines(d){
+    const lines = [];
+    lines.push(`**${d.day}**${d.note ? ' — ' + d.note : ''}`);
+    MEAL_SLOTS.forEach(slot => lines.push(`  - ${slot}: ${mealText(d.meals[slot])}`));
+    lines.push(`  - Cooking/prepping: ${cookingText(d.cooking)}`);
+    const rev = reviewSummaryText(d);
+    if (rev) lines.push(`  - Review: ${rev}`);
+    if (d.extraNotes) lines.push(`  - Extra: ${d.extraNotes}`);
+    return lines;
+  }
+
+  function exportMarkdown(){
+    const lines = [];
+    lines.push('# Kitchen Ledger — ' + new Date().toLocaleDateString());
+    lines.push('');
+    lines.push('## This Week');
+    lines.push('');
+    state.currentWeek.days.forEach(d => { dayBlockLines(d).forEach(l => lines.push(l)); lines.push(''); });
+    if (state.currentWeek.weeklyNotes){
+      lines.push('**Weekly notes:** ' + state.currentWeek.weeklyNotes);
+      lines.push('');
+    }
+    lines.push('## Food on Hand');
+    lines.push('');
+    if (state.foodOnHand.length === 0){
+      lines.push('_(empty)_');
+    } else {
+      FOH_CATEGORIES.forEach(cat => {
+        const items = state.foodOnHand.filter(i => i.category === cat);
+        if (items.length){
+          lines.push(`**${FOH_LABELS[cat]}:**`);
+          items.forEach(i => lines.push(`- ${i.text}${i.note ? ' (' + i.note + ')' : ''}`));
+        }
+      });
+    }
+    lines.push('');
+    lines.push('## Grocery List');
+    lines.push('');
+    if (state.groceryList.length === 0){
+      lines.push('_(empty)_');
+    } else {
+      state.groceryList.forEach(i => lines.push(`- [${i.checked ? 'x' : ' '}] ${i.text}${i.source ? ' (from: ' + i.source + ')' : ''}`));
+    }
+    lines.push('');
+    lines.push('## Recipe Box');
+    lines.push('');
+    if (state.recipes.length === 0){
+      lines.push('_(empty)_');
+    } else {
+      state.recipes.slice().sort((a,b)=>(a.title||'').localeCompare(b.title||'')).forEach(r => {
+        lines.push(`### ${r.title}`);
+        lines.push(`*${effortLabel(r.effort)}${r.servings ? ' · serves ' + r.servings : ''}${r.tags ? ' · ' + r.tags : ''}*`);
+        lines.push('');
+        lines.push('**Ingredients:**');
+        (r.ingredients||'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(i => lines.push('- ' + i));
+        lines.push('');
+        lines.push('**Steps:**');
+        (r.steps||'').split('\n').map(s=>s.trim()).filter(Boolean).forEach((s,idx) => lines.push((idx+1) + '. ' + s));
+        if (r.notes){
+          lines.push('');
+          lines.push('**Notes:** ' + r.notes);
+        }
+        if (r.feedbackLog && r.feedbackLog.length){
+          lines.push('');
+          lines.push('**Feedback history:**');
+          r.feedbackLog.slice().reverse().forEach(h => {
+            lines.push(`- ${new Date(h.date).toLocaleDateString()} — ${ratingLabel(h.rating)}${h.cookingNotes ? '; cooking: ' + h.cookingNotes : ''}${h.tasteNotes ? '; taste: ' + h.tasteNotes : ''}${h.keptNotes ? '; kept: ' + h.keptNotes : ''}`);
+          });
+        }
+        lines.push('');
+      });
+    }
+    if (state.archivedWeeks.length){
+      lines.push('## Past Weeks');
+      lines.push('');
+      state.archivedWeeks.forEach(w => {
+        lines.push(`### Week of ${new Date(w.savedAt).toLocaleDateString()}`);
+        w.days.forEach(d => { dayBlockLines(d).forEach(l => lines.push(l)); });
+        if (w.weeklyNotes) lines.push('_Notes: ' + w.weeklyNotes + '_');
+        lines.push('');
+      });
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kitchen-ledger-' + new Date().toISOString().slice(0,10) + '.md';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(){
+    document.getElementById('import-input').click();
+  }
+  function handleImportFile(fileInput){
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const parsed = JSON.parse(e.target.result);
+        if (!confirm('Importing will replace everything currently in the app with this backup. Continue?')) return;
+        state = Object.assign(defaultState(), parsed);
+        migrateState();
+        save();
+        render();
+      } catch(err){
+        alert('That file could not be read as a Kitchen Ledger backup.');
+      }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+  }
+
+  function switchTab(tab){
+    activeTab = tab;
+    expandedRecipeId = null;
+    showRecipeForm = false;
+    editingRecipeId = null;
+    render();
+  }
+
+  // ---------- RECIPES ----------
+
+  function effortLabel(e){
+    return e === 'quick' ? 'Quick' : e === 'project' ? 'Project' : 'Moderate';
+  }
+
+  function filteredRecipes(){
+    let list = state.recipes.slice();
+    if (effortFilter !== 'all') list = list.filter(r => (r.effort || 'moderate') === effortFilter);
+    if (recipeSearch.trim()){
+      const q = recipeSearch.trim().toLowerCase();
+      list = list.filter(r => [r.title, r.tags, r.ingredients, r.notes].join(' ').toLowerCase().includes(q));
+    }
+    return list.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  }
+
+  function recipeFormHTML(recipe){
+    const r = recipe || { title:'', servings:'', effort:'moderate', tags:'', ingredients:'', steps:'', notes:'' };
+    return `
+      <div class="field"><label>Title</label>
+        <input type="text" id="f-title" value="${escAttr(r.title)}" placeholder="Sheet-pan chicken thighs"></div>
+      <div class="row">
+        <div class="field"><label>Servings</label>
+          <input type="text" id="f-servings" value="${escAttr(r.servings)}" placeholder="2"></div>
+        <div class="field"><label>Effort</label>
+          <select id="f-effort">
+            <option value="quick" ${r.effort==='quick'?'selected':''}>Quick</option>
+            <option value="moderate" ${(!r.effort||r.effort==='moderate')?'selected':''}>Moderate</option>
+            <option value="project" ${r.effort==='project'?'selected':''}>Project</option>
+          </select></div>
+      </div>
+      <div class="field"><label>Tags (comma-separated — cuisine, mood, standby, etc.)</label>
+        <input type="text" id="f-tags" value="${escAttr(r.tags)}" placeholder="sheet-pan, standby, needs-freezer"></div>
+      <div class="field"><label>Ingredients (one per line)</label>
+        <textarea id="f-ingredients" placeholder="2 chicken thighs&#10;1 lemon&#10;olive oil">${escHTML(r.ingredients)}</textarea></div>
+      <div class="field"><label>Steps (one per line)</label>
+        <textarea id="f-steps" placeholder="Preheat oven to 425&#10;Toss everything on a sheet pan&#10;Roast 30 min">${escHTML(r.steps)}</textarea></div>
+      <div class="field"><label>Notes — adaptations, technique reminders, why it earned a spot</label>
+        <textarea id="f-notes" placeholder="Halved from the original 4-serving recipe; skip the marinade step when short on time.">${escHTML(r.notes)}</textarea></div>
+      <div class="detail-actions">
+        <button class="btn" onclick="KL.saveRecipeForm()">Save recipe</button>
+        <button class="btn secondary" onclick="KL.cancelRecipeForm()">Cancel</button>
+      </div>
+    `;
+  }
+
+  function renderRecipes(){
+    const list = filteredRecipes();
+    let html = `<h2 class="section-title">Recipe Box</h2>`;
+    html += `<div class="toolbar">
+      <input type="search" class="searchbar" style="max-width:280px;margin-bottom:0;" placeholder="Search title, tags, ingredients…"
+        value="${escAttr(recipeSearch)}" oninput="KL.setSearch(this.value)">
+      <button class="btn" onclick="KL.newRecipeForm()">+ New recipe</button>
+    </div>`;
+    html += `<div class="chips">
+      ${['all','quick','moderate','project'].map(e => `<div class="chip ${effortFilter===e?'active':''}" onclick="KL.setEffortFilter('${e}')">${e==='all'?'All':effortLabel(e)}</div>`).join('')}
+    </div>`;
+
+    if (showRecipeForm){
+      const editing = editingRecipeId ? state.recipes.find(r => r.id === editingRecipeId) : null;
+      html += `<div class="recipe-detail"><h3>${editing ? 'Edit recipe' : 'New recipe'}</h3>${recipeFormHTML(editing)}</div>`;
+      panelEl.innerHTML = html;
+      return;
+    }
+
+    if (list.length === 0){
+      html += `<div class="empty-state"><div class="glyph">🗂️</div>
+        ${state.recipes.length === 0
+          ? "Your recipe box is empty. Add the first standby you don't want to lose."
+          : "Nothing matches that search or filter."}
+      </div>`;
+      panelEl.innerHTML = html;
+      return;
+    }
+
+    html += `<div class="recipe-grid">`;
+    list.forEach(r => {
+      const tags = (r.tags||'').split(',').map(t=>t.trim()).filter(Boolean);
+      html += `<div class="recipe-card effort-${r.effort||'moderate'}" onclick="KL.toggleExpand('${r.id}')">
+        <h3>${escHTML(r.title)}</h3>
+        <div class="meta">${effortLabel(r.effort)}${r.servings ? ' · serves ' + escHTML(r.servings) : ''}</div>
+        <div class="tags">${tags.map(t=>`<span>${escHTML(t)}</span>`).join('')}</div>
+      </div>`;
+    });
+    html += `</div>`;
+
+    const expanded = expandedRecipeId ? state.recipes.find(r => r.id === expandedRecipeId) : null;
+    if (expanded){
+      const ingredients = (expanded.ingredients||'').split('\n').map(s=>s.trim()).filter(Boolean);
+      const steps = (expanded.steps||'').split('\n').map(s=>s.trim()).filter(Boolean);
+      const history = (expanded.feedbackLog||[]).slice().reverse();
+      html += `<div class="recipe-detail">
+        <h3>${escHTML(expanded.title)}</h3>
+        <div class="meta muted">${effortLabel(expanded.effort)}${expanded.servings ? ' · serves ' + escHTML(expanded.servings) : ''}</div>
+        <div class="cols">
+          <div><strong>Ingredients</strong><ul>${ingredients.map(i=>`<li>${escHTML(i)}</li>`).join('') || '<li class="muted">none listed</li>'}</ul></div>
+          <div><strong>Steps</strong><ol>${steps.map(s=>`<li>${escHTML(s)}</li>`).join('') || '<li class="muted">none listed</li>'}</ol></div>
+        </div>
+        ${expanded.notes ? `<div class="notes">${escHTML(expanded.notes)}</div>` : ''}
+        ${history.length ? `<div class="feedback-history"><strong class="small">Past feedback</strong>${history.map(h=>`<div class="entry">${new Date(h.date).toLocaleDateString()} — <strong>${ratingLabel(h.rating)}</strong>${h.cookingNotes?' · '+escHTML(h.cookingNotes):''}${h.tasteNotes?' · '+escHTML(h.tasteNotes):''}${h.keptNotes?' · '+escHTML(h.keptNotes):''}</div>`).join('')}</div>` : ''}
+        <div class="detail-actions">
+          <button class="btn secondary" onclick="KL.editRecipe('${expanded.id}')">Edit</button>
+          <button class="btn warn" onclick="KL.deleteRecipe('${expanded.id}')">Delete</button>
+          <button class="btn ghost" onclick="KL.toggleExpand(null)">Close</button>
+        </div>
+      </div>`;
+    }
+
+    panelEl.innerHTML = html;
+  }
+
+  function newRecipeForm(){ showRecipeForm = true; editingRecipeId = null; render(); }
+  function editRecipe(id){ showRecipeForm = true; editingRecipeId = id; expandedRecipeId = null; render(); }
+  function cancelRecipeForm(){ showRecipeForm = false; editingRecipeId = null; render(); }
+
+  function saveRecipeForm(){
+    const title = document.getElementById('f-title').value.trim();
+    if (!title){ alert('Give the recipe a title first.'); return; }
+    const data = {
+      title,
+      servings: document.getElementById('f-servings').value.trim(),
+      effort: document.getElementById('f-effort').value,
+      tags: document.getElementById('f-tags').value.trim(),
+      ingredients: document.getElementById('f-ingredients').value,
+      steps: document.getElementById('f-steps').value,
+      notes: document.getElementById('f-notes').value
+    };
+    if (editingRecipeId){
+      const idx = state.recipes.findIndex(r => r.id === editingRecipeId);
+      if (idx > -1) state.recipes[idx] = Object.assign(state.recipes[idx], data);
+    } else {
+      state.recipes.push(Object.assign({ id: uid(), createdAt: Date.now(), feedbackLog: [] }, data));
+    }
+    showRecipeForm = false; editingRecipeId = null;
+    save(); render();
+  }
+
+  function deleteRecipe(id){
+    if (!confirm('Delete this recipe for good?')) return;
+    state.recipes = state.recipes.filter(r => r.id !== id);
+    expandedRecipeId = null;
+    save(); render();
+  }
+
+  function toggleExpand(id){ expandedRecipeId = (expandedRecipeId === id) ? null : id; render(); }
+  function setSearch(v){ recipeSearch = v; render(); }
+  function setEffortFilter(v){ effortFilter = v; render(); }
+
+  // ---------- FOOD ON HAND ----------
+
+  function renderOnHand(){
+    let html = `<h2 class="section-title">Food on Hand</h2>`;
+    html += `<div class="row">
+      <div class="field" style="flex:2;"><label>Item</label><input type="text" id="foh-text" placeholder="half a bag of spinach"></div>
+      <div class="field"><label>Where</label><select id="foh-category">
+        ${FOH_CATEGORIES.map(c => `<option value="${c}">${FOH_LABELS[c]}</option>`).join('')}
+      </select></div>
+      <div class="field" style="flex:2;"><label>Note (optional)</label><input type="text" id="foh-note" placeholder="use by Thursday"></div>
+    </div>
+    <div class="detail-actions"><button class="btn" onclick="KL.addOnHandItem()">Add</button></div>`;
+
+    if (state.foodOnHand.length === 0){
+      html += `<div class="empty-state"><div class="glyph">🧊</div>Nothing logged yet.</div>`;
+    } else {
+      FOH_CATEGORIES.forEach(cat => {
+        const items = state.foodOnHand.filter(i => i.category === cat);
+        html += `<div class="category-section">
+          <div class="category-header">${FOH_LABELS[cat]} <span class="category-count">${items.length}</span></div>`;
+        if (items.length === 0){
+          html += `<p class="muted small">Nothing here.</p>`;
+        } else {
+          items.forEach(item => {
+            html += `<div class="onhand-item">
+              <span class="item-text">${escHTML(item.text)}</span>
+              <span class="item-note">${escHTML(item.note||'')}</span>
+              <select onchange="KL.moveOnHandItem('${item.id}', this.value)">
+                ${FOH_CATEGORIES.map(c => `<option value="${c}" ${c===item.category?'selected':''}>${FOH_LABELS[c]}</option>`).join('')}
+              </select>
+              <button class="del-x" onclick="KL.deleteOnHandItem('${item.id}')" title="Remove">✕</button>
+            </div>`;
+          });
+        }
+        html += `</div>`;
+      });
+    }
+    panelEl.innerHTML = html;
+  }
+
+  function addOnHandItem(){
+    const text = document.getElementById('foh-text').value.trim();
+    if (!text) return;
+    const category = document.getElementById('foh-category').value;
+    const note = document.getElementById('foh-note').value.trim();
+    state.foodOnHand.push({ id: uid(), text, category, note });
+    save(); render();
+  }
+  function moveOnHandItem(id, category){
+    const item = state.foodOnHand.find(i => i.id === id);
+    if (item) item.category = category;
+    save(); render();
+  }
+  function deleteOnHandItem(id){
+    state.foodOnHand = state.foodOnHand.filter(i => i.id !== id);
+    save(); render();
+  }
+
+  // ---------- THIS WEEK ----------
+
+  function matchDayHeader(line){
+    const m = line.trim().match(/^([A-Za-z]+)\s*:?\s*$/);
+    if (!m) return null;
+    const word = m[1].toLowerCase();
+    if (word.length < 3) return null;
+    return DAYS.find(full => full.toLowerCase().startsWith(word)) || null;
+  }
+  function normalizeSlotLabel(label){
+    return label.toLowerCase().replace(/[\s-]+/g,'');
+  }
+  function matchContentLine(line){
+    const m = line.match(/^\s*([A-Za-z][A-Za-z \-]*?)\s*[:\-–]\s*(.+)$/);
+    if (!m) return null;
+    const label = m[1].trim();
+    const text = m[2].trim();
+    if (!text) return null;
+    const normLabel = normalizeSlotLabel(label);
+    if (COOKING_WORDS.includes(normLabel)) return { type:'cooking', text };
+    const slot = MEAL_SLOTS.find(s => normalizeSlotLabel(s) === normLabel);
+    if (slot) return { type:'meal', slot, text };
+    return null;
+  }
+  function findRecipeMatch(text){
+    const lower = text.toLowerCase();
+    let r = state.recipes.find(r => r.title.toLowerCase() === lower);
+    if (r) return r;
+    r = state.recipes.find(r => lower.includes(r.title.toLowerCase()));
+    return r || null;
+  }
+  function applyMealText(d, slot, text){
+    if (/eating out/i.test(text)){ d.meals[slot] = { mode:'out', recipeId:null, customText:'' }; return; }
+    const r = findRecipeMatch(text);
+    if (r) d.meals[slot] = { mode:'recipe', recipeId:r.id, customText:'' };
+    else d.meals[slot] = { mode:'custom', recipeId:null, customText:text };
+  }
+  function applyCookingText(d, text){
+    const r = findRecipeMatch(text);
+    if (r) d.cooking = { mode:'recipe', recipeId:r.id, customText:'' };
+    else d.cooking = { mode:'custom', recipeId:null, customText:text };
+  }
+  function parseWeeklyPaste(){
+    const el = document.getElementById('paste-week');
+    const raw = el ? el.value : '';
+    if (!raw.trim()){ alert('Paste something into the box first.'); return; }
+    const lines = raw.split('\n');
+    let dayIdx = null;
+    let filled = 0, unmatched = 0;
+    lines.forEach(line => {
+      if (!line.trim()) return;
+      const dayName = matchDayHeader(line);
+      if (dayName){ dayIdx = DAYS.indexOf(dayName); return; }
+      if (dayIdx === null) return;
+      const content = matchContentLine(line);
+      const d = state.currentWeek.days[dayIdx];
+      if (!content){ unmatched++; return; }
+      if (content.type === 'cooking') applyCookingText(d, content.text);
+      else applyMealText(d, content.slot, content.text);
+      filled++;
+    });
+    save(); render();
+    alert(`Filled ${filled} item(s) across the week.${unmatched ? ' ' + unmatched + ' line(s) not recognized — skipped.' : ''}`);
+  }
+
+  function renderWeek(){
+    let html = `<h2 class="section-title">This Week</h2>`;
+    html += `<div class="paste-box">
+      <label>Paste a weekly plan to auto-fill — day header lines ("Monday:"), then meal lines ("Breakfast: …", "Lunch: …", "Dinner: …", "Cooking: …")</label>
+      <textarea id="paste-week" placeholder="Monday:
+Breakfast: oatmeal
+Lunch: leftover chow mein
+Dinner: sheet pan chicken
+Cooking: sheet pan chicken (double batch)
+
+Tuesday:
+..."></textarea>
+      <div class="detail-actions"><button class="btn" onclick="KL.parseWeeklyPaste()">Fill week from paste</button></div>
+    </div>`;
+
+    state.currentWeek.days.forEach((d,i) => {
+      html += `<details class="day-block"${i===0?' open':''}>
+        <summary>${d.day}<span class="summary-sub">${daySummary(d)}</span></summary>
+        <div class="day-body">`;
+      MEAL_SLOTS.forEach(slot => {
+        const m = d.meals[slot];
+        html += `<div class="meal-row">
+          <div class="meal-label">${slot}</div>
+          <div class="meal-fields">
+            <select onchange="KL.setMealMode(${i}, '${slot}', this.value)">
+              <option value="empty" ${m.mode==='empty'?'selected':''}>— choose —</option>
+              <option value="out" ${m.mode==='out'?'selected':''}>Eating out</option>
+              <option value="custom" ${m.mode==='custom'?'selected':''}>Other (type it in)</option>
+              <optgroup label="Recipe box">
+                ${state.recipes.map(r => `<option value="recipe:${r.id}" ${m.mode==='recipe' && m.recipeId===r.id?'selected':''}>${escHTML(r.title)}</option>`).join('')}
+              </optgroup>
+            </select>
+            ${m.mode==='custom' ? `<input type="text" placeholder="what you're having" value="${escAttr(m.customText)}" onchange="KL.setMealCustom(${i}, '${slot}', this.value)">` : ''}
+          </div>
+        </div>`;
+      });
+      html += `<div class="cooking-row">
+        <label>Cooking / prepping today</label>
+        <div class="meal-fields">
+          <select onchange="KL.setCookingMode(${i}, this.value)">
+            <option value="none" ${d.cooking.mode==='none'?'selected':''}>— nothing planned —</option>
+            <option value="custom" ${d.cooking.mode==='custom'?'selected':''}>Other (type it in)</option>
+            <optgroup label="Recipe box">
+              ${state.recipes.map(r => `<option value="recipe:${r.id}" ${d.cooking.mode==='recipe' && d.cooking.recipeId===r.id?'selected':''}>${escHTML(r.title)}</option>`).join('')}
+            </optgroup>
+          </select>
+          ${d.cooking.mode==='custom' ? `<input type="text" placeholder="what you're making" value="${escAttr(d.cooking.customText)}" onchange="KL.setCookingCustom(${i}, this.value)">` : ''}
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;"><label>Day note — energy, plan change…</label>
+        <input type="text" value="${escAttr(d.note)}" onchange="KL.setDayNote(${i}, this.value)"></div>
+      </div>
+      </details>`;
+    });
+
+    html += `<div class="field" style="margin-top:16px;"><label>Weekly notes — what to use up, definite yes/no this week, anything else</label>
+      <textarea id="week-notes" onchange="KL.setWeeklyNotes(this.value)" placeholder="Use up: half a bag of spinach, the last of the rice.&#10;No red meat this week. Want to try something with the harissa.">${escHTML(state.currentWeek.weeklyNotes)}</textarea></div>`;
+    html += `<div class="detail-actions">
+      <button class="btn" onclick="KL.generateGroceryList()">Add this week's ingredients to grocery list</button>
+      <button class="btn secondary" onclick="KL.archiveWeek()">Archive week &amp; start fresh</button>
+    </div>`;
+
+    if (state.archivedWeeks.length){
+      html += `<div class="archive-list"><strong class="small">Past weeks</strong>`;
+      state.archivedWeeks.slice().reverse().forEach(w => {
+        const date = new Date(w.savedAt);
+        html += `<div class="archive-item"><span>${date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</span>
+          <button class="btn ghost small" onclick="KL.viewArchive('${w.id}')">View</button></div>`;
+      });
+      html += `</div>`;
+    }
+    panelEl.innerHTML = html;
+  }
+
+  function setMealMode(i, slot, val){
+    const m = state.currentWeek.days[i].meals[slot];
+    if (val === 'empty'){ m.mode='empty'; m.recipeId=null; m.customText=''; }
+    else if (val === 'out'){ m.mode='out'; m.recipeId=null; m.customText=''; }
+    else if (val === 'custom'){ m.mode='custom'; m.recipeId=null; }
+    else if (val.startsWith('recipe:')){ m.mode='recipe'; m.recipeId = val.slice(7); m.customText=''; }
+    save(); render();
+  }
+  function setMealCustom(i, slot, val){ state.currentWeek.days[i].meals[slot].customText = val; save(); }
+  function setCookingMode(i, val){
+    const c = state.currentWeek.days[i].cooking;
+    if (val === 'none'){ c.mode='none'; c.recipeId=null; c.customText=''; }
+    else if (val === 'custom'){ c.mode='custom'; c.recipeId=null; }
+    else if (val.startsWith('recipe:')){ c.mode='recipe'; c.recipeId = val.slice(7); c.customText=''; }
+    save(); render();
+  }
+  function setCookingCustom(i, val){ state.currentWeek.days[i].cooking.customText = val; save(); }
+  function setDayNote(i, val){ state.currentWeek.days[i].note = val; save(); }
+  function setWeeklyNotes(val){ state.currentWeek.weeklyNotes = val; save(); }
+
+  function generateGroceryList(){
+    let added = 0;
+    const existingLower = new Set(state.groceryList.map(g => g.text.trim().toLowerCase()));
+    function addFromRecipeId(recipeId, sourceTitle){
+      const recipe = state.recipes.find(r => r.id === recipeId);
+      if (!recipe) return;
+      (recipe.ingredients||'').split('\n').map(s=>s.trim()).filter(Boolean).forEach(ing => {
+        const key = ing.toLowerCase();
+        if (!existingLower.has(key)){
+          state.groceryList.push({ id: uid(), text: ing, checked:false, source: sourceTitle || recipe.title });
+          existingLower.add(key);
+          added++;
+        }
+      });
+    }
+    state.currentWeek.days.forEach(d => {
+      if (d.cooking.mode === 'recipe' && d.cooking.recipeId) addFromRecipeId(d.cooking.recipeId);
+      MEAL_SLOTS.forEach(slot => {
+        const m = d.meals[slot];
+        if (m.mode === 'recipe' && m.recipeId) addFromRecipeId(m.recipeId);
+      });
+    });
+    save(); render();
+    if (activeTab === 'week'){
+      setTimeout(() => alert(added ? `Added ${added} item(s) to the grocery list.` : `Nothing new to add — check that some meals or cooking slots have recipes assigned.`), 10);
+    }
+  }
+
+  function archiveWeek(){
+    if (!confirm("Archive this week and start a blank one?")) return;
+    state.archivedWeeks.push({ id: uid(), savedAt: Date.now(), days: state.currentWeek.days, weeklyNotes: state.currentWeek.weeklyNotes });
+    state.currentWeek = { days: blankDays(), weeklyNotes: '' };
+    save(); render();
+  }
+
+  function viewArchive(id){
+    const w = state.archivedWeeks.find(w => w.id === id);
+    if (!w) return;
+    const lines = [];
+    w.days.forEach(d => dayBlockLines(d).forEach(l => lines.push(l.replace(/\*\*/g,'').replace(/^  - /,'    '))));
+    alert(`Week of ${new Date(w.savedAt).toLocaleDateString()}\n\n${lines.join('\n')}${w.weeklyNotes ? '\n\nNotes: ' + w.weeklyNotes : ''}`);
+  }
+
+  // ---------- WEEK REVIEW ----------
+
+  function recipesUsedThisWeek(){
+    const ids = new Set();
+    state.currentWeek.days.forEach(d => {
+      if (d.cooking.mode==='recipe' && d.cooking.recipeId) ids.add(d.cooking.recipeId);
+      MEAL_SLOTS.forEach(slot => { const m=d.meals[slot]; if (m.mode==='recipe' && m.recipeId) ids.add(m.recipeId); });
+    });
+    return Array.from(ids).map(id => state.recipes.find(r => r.id===id)).filter(Boolean);
+  }
+
+  function renderReview(){
+    let html = `<h2 class="section-title">Week Review</h2>`;
+    html += `<p class="muted small">Confirm how the week actually went, then log feedback on anything you cooked.</p>`;
+    state.currentWeek.days.forEach((d,i) => {
+      const planned = [];
+      MEAL_SLOTS.forEach(slot => { const t = mealText(d.meals[slot]); if (t !== '—') planned.push(`${slot}: ${t}`); });
+      const cook = cookingText(d.cooking);
+      html += `<div class="review-day">
+        <div class="planned">${d.day}</div>
+        <div class="muted small" style="margin-bottom:8px;">${planned.length ? planned.join(' · ') : 'Nothing planned'}${cook!=='—' ? ' · Cooking: ' + cook : ''}</div>
+        <div class="review-fields">
+          <select onchange="KL.setReviewStatus(${i}, this.value)">
+            <option value="unconfirmed" ${d.reviewStatus==='unconfirmed'?'selected':''}>— not reviewed —</option>
+            <option value="as-planned" ${d.reviewStatus==='as-planned'?'selected':''}>Had it as planned</option>
+            <option value="different" ${d.reviewStatus==='different'?'selected':''}>Had something different</option>
+          </select>
+          ${d.reviewStatus==='different' ? `<input type="text" placeholder="what you actually had" value="${escAttr(d.actualText)}" onchange="KL.setReviewActual(${i}, this.value)">` : ''}
+          <input type="text" placeholder="anything extra / snacks" value="${escAttr(d.extraNotes)}" onchange="KL.setReviewExtra(${i}, this.value)">
+        </div>
+      </div>`;
+    });
+
+    const used = recipesUsedThisWeek();
+    html += `<h2 class="section-title" style="margin-top:24px;">Recipe Feedback</h2>`;
+    if (used.length === 0){
+      html += `<p class="muted small">No recipes assigned to a meal or cooking slot this week yet.</p>`;
+    } else {
+      used.forEach(r => {
+        const history = (r.feedbackLog||[]).slice().reverse();
+        html += `<div class="feedback-card">
+          <h4>${escHTML(r.title)}</h4>
+          <div class="field"><label>Rating</label>
+            <select id="fb-rating-${r.id}">
+              <option value="great">Great — keep it</option>
+              <option value="good">Good</option>
+              <option value="meh">Meh</option>
+              <option value="no">Not again</option>
+            </select></div>
+          <div class="field"><label>How the cooking went</label><textarea id="fb-cooking-${r.id}" placeholder="Timing, technique, anything you'd change"></textarea></div>
+          <div class="field"><label>How it tasted</label><textarea id="fb-taste-${r.id}" placeholder="…"></textarea></div>
+          <div class="field"><label>How it kept (leftovers)</label><textarea id="fb-kept-${r.id}" placeholder="…"></textarea></div>
+          <div class="detail-actions"><button class="btn" onclick="KL.saveFeedback('${r.id}')">Save feedback</button></div>
+          ${history.length ? `<div class="feedback-history">${history.map(h => `<div class="entry">${new Date(h.date).toLocaleDateString()} — <strong>${ratingLabel(h.rating)}</strong>${h.cookingNotes?' · '+escHTML(h.cookingNotes):''}${h.tasteNotes?' · '+escHTML(h.tasteNotes):''}${h.keptNotes?' · '+escHTML(h.keptNotes):''}</div>`).join('')}</div>` : ''}
+        </div>`;
+      });
+    }
+    panelEl.innerHTML = html;
+  }
+
+  function setReviewStatus(i, val){ state.currentWeek.days[i].reviewStatus = val; save(); render(); }
+  function setReviewActual(i, val){ state.currentWeek.days[i].actualText = val; save(); }
+  function setReviewExtra(i, val){ state.currentWeek.days[i].extraNotes = val; save(); }
+
+  function saveFeedback(recipeId){
+    const r = state.recipes.find(r => r.id === recipeId);
+    if (!r) return;
+    if (!Array.isArray(r.feedbackLog)) r.feedbackLog = [];
+    const rating = document.getElementById('fb-rating-'+recipeId).value;
+    const cookingNotes = document.getElementById('fb-cooking-'+recipeId).value.trim();
+    const tasteNotes = document.getElementById('fb-taste-'+recipeId).value.trim();
+    const keptNotes = document.getElementById('fb-kept-'+recipeId).value.trim();
+    if (!cookingNotes && !tasteNotes && !keptNotes){ alert('Add at least one note before saving.'); return; }
+    r.feedbackLog.push({ id: uid(), date: Date.now(), rating, cookingNotes, tasteNotes, keptNotes });
+    save(); render();
+  }
+
+  // ---------- GROCERY LIST ----------
+
+  function renderGrocery(){
+    let html = `<h2 class="section-title">Grocery List</h2>`;
+    html += `<div class="grocery-add">
+      <input type="text" id="new-item" placeholder="Add an item…" onkeydown="if(event.key==='Enter'){KL.addGroceryItem();}">
+      <button class="btn" onclick="KL.addGroceryItem()">Add</button>
+    </div>`;
+    if (state.groceryList.length === 0){
+      html += `<div class="empty-state"><div class="glyph">🧺</div>Nothing on the list yet.</div>`;
+    } else {
+      html += `<ul class="grocery-list">`;
+      state.groceryList.forEach(item => {
+        html += `<li class="${item.checked?'checked':''}">
+          <input type="checkbox" ${item.checked?'checked':''} onchange="KL.toggleGroceryItem('${item.id}')">
+          <span class="item-text">${escHTML(item.text)}</span>
+          ${item.source ? `<span class="item-source">${escHTML(item.source)}</span>` : ''}
+          <button class="del-x" onclick="KL.deleteGroceryItem('${item.id}')" title="Remove">✕</button>
+        </li>`;
+      });
+      html += `</ul>`;
+      html += `<div class="detail-actions"><button class="btn secondary" onclick="KL.clearChecked()">Clear checked items</button></div>`;
+    }
+    panelEl.innerHTML = html;
+  }
+
+  function addGroceryItem(){
+    const input = document.getElementById('new-item');
+    const val = input.value.trim();
+    if (!val) return;
+    state.groceryList.push({ id: uid(), text: val, checked:false, source:null });
+    input.value = '';
+    save(); render();
+    document.getElementById('new-item').focus();
+  }
+  function toggleGroceryItem(id){
+    const item = state.groceryList.find(i => i.id === id);
+    if (item) item.checked = !item.checked;
+    save(); render();
+  }
+  function deleteGroceryItem(id){
+    state.groceryList = state.groceryList.filter(i => i.id !== id);
+    save(); render();
+  }
+  function clearChecked(){
+    state.groceryList = state.groceryList.filter(i => !i.checked);
+    save(); render();
+  }
+
+  // ---------- UTIL ----------
+
+  function escHTML(s){
+    return (s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  }
+  function escAttr(s){
+    return escHTML(s).replace(/"/g,'&quot;');
+  }
+
+  function render(){
+    tabsEl.innerHTML = ['recipes','onhand','week','review','grocery'].map(t => {
+      const labels = { recipes:'Recipe Box', onhand:'Food on Hand', week:'This Week', review:'Week Review', grocery:'Grocery List' };
+      return `<button class="tab-btn ${activeTab===t?'active':''}" onclick="KL.switchTab('${t}')">${labels[t]}</button>`;
+    }).join('');
+
+    if (activeTab === 'recipes') renderRecipes();
+    else if (activeTab === 'onhand') renderOnHand();
+    else if (activeTab === 'week') renderWeek();
+    else if (activeTab === 'review') renderReview();
+    else renderGrocery();
+  }
+
+  window.KL = {
+    switchTab, newRecipeForm, editRecipe, cancelRecipeForm, saveRecipeForm, deleteRecipe,
+    toggleExpand, setSearch, setEffortFilter,
+    addOnHandItem, moveOnHandItem, deleteOnHandItem,
+    parseWeeklyPaste, setMealMode, setMealCustom, setCookingMode, setCookingCustom, setDayNote, setWeeklyNotes,
+    generateGroceryList, archiveWeek, viewArchive,
+    setReviewStatus, setReviewActual, setReviewExtra, saveFeedback,
+    addGroceryItem, toggleGroceryItem, deleteGroceryItem, clearChecked,
+    exportData, exportMarkdown, importData, handleImportFile
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>
